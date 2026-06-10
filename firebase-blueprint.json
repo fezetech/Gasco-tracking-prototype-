@@ -81,7 +81,7 @@
         "creditBalance": { "type": "number" },
         "bonusPoints": { "type": "number" },
         "tier": { "type": "string", "enum": ["Bronze", "Silver", "Gold", "VIP"] },
-        "createdAt": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
         "companyName": { "type": "string" }
       },
       "required": ["id", "name", "phone", "depositBalance", "creditLimit", "creditBalance", "bonusPoints", "tier", "createdAt"]
@@ -95,7 +95,7 @@
         "shiftId": { "type": "string" },
         "attendantId": { "type": "string" },
         "attendantName": { "type": "string" },
-        "timestamp": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
         "reason": { "type": "string" },
         "approvedBy": { "type": "string" }
