@@ -1,0 +1,6 @@
+{
+  "name": "Petrol Station Tracker",
+  "description": "Sales tracking, offline balancing, inventory monitoring, and automated daily shift reports for station attendants and managers at a petrol station.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

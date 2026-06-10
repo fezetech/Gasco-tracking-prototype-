@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "Staff": {
+      "title": "Staff Member",
+      "description": "Information about petrol station employees and their roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["manager", "attendant"] },
+        "pinCode": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "role", "pinCode", "email"]
+    },
+    "Tank": {
+      "title": "Fuel Tank",
+      "description": "Storage tanks containing fuel inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "fuelType": { "type": "string", "enum": ["Petrol", "Diesel", "Kerosene", "V-Power"] },
+        "capacity": { "type": "number" },
+        "currentLevel": { "type": "number" },
+        "pricePerLitre": { "type": "number" }
+      },
+      "required": ["id", "name", "fuelType", "capacity", "currentLevel", "pricePerLitre"]
+    },
+    "Shift": {
+      "title": "Daily/Attendant Shift",
+      "description": "Tracking shifts worked by attendants, containing initial and final readings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "attendantId": { "type": "string" },
+        "attendantName": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "completed", "verified"] },
+        "startPumpReadings": { "type": "object" },
+        "endPumpReadings": { "type": "object" },
+        "totalSales": { "type": "number" },
+        "revenueBreakdown": { "type": "object" },
+        "taxAmount": { "type": "number" },
+        "verifiedBy": { "type": "string" }
+      },
+      "required": ["id", "attendantId", "startTime", "status"]
+    },
+    "Transaction": {
+      "title": "Financial Transaction",
+      "description": "A real-time record of fuel sales, shop sales, and expenses.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shiftId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["sale", "expense"] },
+        "category": { "type": "string", "enum": ["fuel", "shop", "lubricants", "expense"] },
+        "paymentMethod": { "type": "string", "enum": ["cash", "mobile_money", "bank_transfer", "credit"] },
+        "amount": { "type": "number" },
+        "quantity": { "type": "number" },
+        "fuelType": { "type": "string" },
+        "pumpId": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "shiftId", "timestamp", "type", "category", "amount"]
+    },
+    "Customer": {
+      "title": "Loyalty or Prepaid Customer",
+      "description": "Registered loyal customer with prepaid wallet balance, credit limits, or loyalty points.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "depositBalance": { "type": "number" },
+        "creditLimit": { "type": "number" },
+        "creditBalance": { "type": "number" },
+        "bonusPoints": { "type": "number" },
+        "tier": { "type": "string", "enum": ["Bronze", "Silver", "Gold", "VIP"] },
+        "createdAt": { "type": "number" },
+        "companyName": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "depositBalance", "creditLimit", "creditBalance", "bonusPoints", "tier", "createdAt"]
+    },
+    "BlindUnlockRequest": {
+      "title": "Blind Balancing Unlock Request",
+      "description": "Request submitted by attendants to view system balance sheets for blind reconciliation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shiftId": { "type": "string" },
+        "attendantId": { "type": "string" },
+        "attendantName": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "declined"] },
+        "reason": { "type": "string" },
+        "approvedBy": { "type": "string" }
+      },
+      "required": ["id", "shiftId", "attendantId", "attendantName", "timestamp", "status", "reason"]
+    }
+  },
+  "firestore": {
+    "staff/{uid}": {
+      "schema": "Staff",
+      "description": "Users of the petrol station management app."
+    },
+    "tanks/{tankId}": {
+      "schema": "Tank",
+      "description": "Storage and price management for the fuel types."
+    },
+    "shifts/{shiftId}": {
+      "schema": "Shift",
+      "description": "Logging work shift activity, calculations, and approvals."
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial sales and custom expenses logged during shifts."
+    },
+    "customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Loyalty database and prepaid card client accounts."
+    },
+    "blind_unlocks/{requestId}": {
+      "schema": "BlindUnlockRequest",
+      "description": "Supervisor bypass overrides for blind counting audits."
+    }
+  }
+}

@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/staff/$(uid)).data;
+    }
+
+    function isManager(uid) {
+      return isSignedIn() && exists(/databases/$(database)/documents/staff/$(uid)) && getUserData(uid).role == "manager";
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- STAFF COLLECTION ---
+    match /staff/{uid} {
+      allow read: if isSignedIn();
+      allow create, delete: if isSignedIn() && isManager(request.auth.uid);
+      allow update: if isSignedIn() && (
+        isManager(request.auth.uid) || (
+          request.auth.uid == uid && 
+          request.resource.data.role == resource.data.role && 
+          request.resource.data.pinCode == resource.data.pinCode &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'avatarColor'])
+        )
+      );
+    }
+
+    // --- TANKS COLLECTION ---
+    match /tanks/{tankId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isSignedIn() && isManager(request.auth.uid);
+      allow update: if isSignedIn() && (
+        isManager(request.auth.uid) || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentLevel']) &&
+          request.resource.data.currentLevel is number &&
+          request.resource.data.currentLevel >= 0 &&
+          request.resource.data.currentLevel <= resource.data.capacity
+        )
+      );
+    }
+
+    // --- SHIFTS COLLECTION ---
+    match /shifts/{shiftId} {
+      allow read: if isSignedIn();
+      allow delete: if isSignedIn() && isManager(request.auth.uid);
+      
+      allow create: if isSignedIn() && 
+        isValidId(shiftId) &&
+        request.resource.data.id == shiftId &&
+        request.resource.data.attendantId == request.auth.uid &&
+        request.resource.data.status == "active";
+
+      allow update: if isSignedIn() && (
+        isManager(request.auth.uid) || (
+          // Active shifting attendant is completing their shift
+          resource.data.status == "active" &&
+          resource.data.attendantId == request.auth.uid &&
+          request.resource.data.status == "completed" &&
+          // Enforce immutable fields
+          request.resource.data.attendantId == resource.data.attendantId &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.startTime == resource.data.startTime &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'endTime', 'endPumpReadings', 'dipLevelEnd', 
+            'totalSales', 'totalExpenses', 'revenueBreakdown', 'taxCalculated', 'notes', 'synced'
+          ])
+        )
+      );
+    }
+
+    // --- TRANSACTIONS COLLECTION ---
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn();
+      allow update, delete: if isSignedIn() && isManager(request.auth.uid);
+
+      allow create: if isSignedIn() &&
+        isValidId(transactionId) &&
+        request.resource.data.id == transactionId &&
+        request.resource.data.amount is number &&
+        request.resource.data.amount >= 0 && (
+          isManager(request.auth.uid) || (
+            // Verify link to an active shift owned by this attendant
+            exists(/databases/$(database)/documents/shifts/$(request.resource.data.shiftId)) &&
+            get(/databases/$(database)/documents/shifts/$(request.resource.data.shiftId)).data.status == "active" &&
+            get(/databases/$(database)/documents/shifts/$(request.resource.data.shiftId)).data.attendantId == request.auth.uid
+          )
+        );
+    }
+
+    // --- CUSTOMERS COLLECTION ---
+    match /customers/{customerId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isManager(request.auth.uid);
+    }
+
+    // --- BLIND UNLOCKS COLLECTION ---
+    match /blind_unlocks/{requestId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if isSignedIn() && isManager(request.auth.uid);
+    }
+  }
+}
