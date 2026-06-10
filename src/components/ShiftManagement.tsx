@@ -1,6 +1,24 @@
 import { useState, FormEvent } from 'react';
 import { useStore } from '../services/store';
-import { Play, Flame, HelpCircle, Save, CheckCircle, FileText, LayoutList, Eye, EyeOff, ShieldCheck, Lock, Unlock, Key, RefreshCw } from 'lucide-react';
+import { useGoogleWorkspace } from '../services/googleWorkspace';
+import { 
+  Play, 
+  Flame, 
+  HelpCircle, 
+  Save, 
+  CheckCircle, 
+  FileText, 
+  LayoutList, 
+  Eye, 
+  EyeOff, 
+  ShieldCheck, 
+  Lock, 
+  Unlock, 
+  Key, 
+  RefreshCw,
+  FileSpreadsheet,
+  ExternalLink
+} from 'lucide-react';
 
 export default function ShiftManagement() {
   const {
@@ -17,6 +35,28 @@ export default function ShiftManagement() {
     approveBlindUnlockForShift,
     overrideBlindUnlockWithPIN
   } = useStore();
+
+  const { googleAccessToken, exportShiftAuditToSheets, exporting: googleExporting } = useGoogleWorkspace();
+  const [syncedShiftId, setSyncedShiftId] = useState<string | null>(null);
+  const [syncedShiftUrl, setSyncedShiftUrl] = useState<string | null>(null);
+  const [shiftSyncStatus, setShiftSyncStatus] = useState<string>('');
+
+  const handleExportShiftSheet = async (shift: any) => {
+    if (!googleAccessToken) {
+      setShiftSyncStatus('Google Workspace disconnected! Connect Google inside the Insights Dashboard first.');
+      return;
+    }
+    setShiftSyncStatus('');
+    setSyncedShiftId(shift.id);
+    setSyncedShiftUrl(null);
+    try {
+      const url = await exportShiftAuditToSheets(shift);
+      setSyncedShiftUrl(url);
+      setShiftSyncStatus(`Shift report (Shift #${shift.id.slice(0, 6).toUpperCase()}) successfully exported!`);
+    } catch (err: any) {
+      setShiftSyncStatus(err?.message || 'Error occurred exporting shift report to Sheets');
+    }
+  };
 
   const [notes, setNotes] = useState('');
   const [managerVerificationNotes, setManagerVerificationNotes] = useState('');
@@ -410,6 +450,19 @@ export default function ShiftManagement() {
                     </div>
 
                     <div className="flex gap-1.5 flex-wrap items-center">
+                      {sh.status !== 'active' && (
+                        <button
+                          onClick={() => handleExportShiftSheet(sh)}
+                          disabled={googleExporting && syncedShiftId === sh.id}
+                          className="flex items-center gap-1.5 bg-emerald-600/10 hover:bg-emerald-600/25 disabled:bg-slate-800 border border-emerald-500/20 text-emerald-400 disabled:text-slate-500 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition select-none cursor-pointer"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <span>
+                            {googleExporting && syncedShiftId === sh.id ? 'Syncing...' : 'To Sheets'}
+                          </span>
+                        </button>
+                      )}
+
                       <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                         isVerified
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -603,6 +656,23 @@ export default function ShiftManagement() {
                           Verify & Sync
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {syncedShiftId === sh.id && shiftSyncStatus && (
+                    <div className={`p-2.5 rounded-xl text-[10px] font-medium border ${syncedShiftUrl ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'} flex items-center justify-between gap-2`}>
+                      <span>{shiftSyncStatus}</span>
+                      {syncedShiftUrl && (
+                        <a
+                          href={syncedShiftUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-emerald-400 font-extrabold hover:underline underline-offset-2 uppercase text-[9px]"
+                        >
+                          <span>Open Sheet</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>

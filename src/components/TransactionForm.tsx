@@ -1,7 +1,22 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useStore } from '../services/store';
+import { useGoogleWorkspace } from '../services/googleWorkspace';
 import { FuelType, PaymentMethod, TransactionCategory } from '../types';
-import { PlusCircle, Search, Filter, Fuel, ShoppingBag, Landmark, ArrowDownLeft, AlertTriangle, User, Wallet, Gift } from 'lucide-react';
+import { 
+  PlusCircle, 
+  Search, 
+  Filter, 
+  Fuel, 
+  ShoppingBag, 
+  Landmark, 
+  ArrowDownLeft, 
+  AlertTriangle, 
+  User, 
+  Wallet, 
+  Gift,
+  FileSpreadsheet,
+  ExternalLink
+} from 'lucide-react';
 
 export default function TransactionForm() {
   const { 
@@ -15,6 +30,26 @@ export default function TransactionForm() {
     formatCurrency, 
     selectedCurrency 
   } = useStore();
+
+  const { googleAccessToken, exportTransactionsToSheets, exporting: googleExporting } = useGoogleWorkspace();
+  const [syncedUrl, setSyncedUrl] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string>('');
+
+  const handleExportTransactions = async () => {
+    if (!googleAccessToken) {
+      setSyncStatus('Google Workspace not connected. Connect Google in the Insights Dashboard first.');
+      return;
+    }
+    setSyncStatus('');
+    setSyncedUrl(null);
+    try {
+      const url = await exportTransactionsToSheets(transactions);
+      setSyncedUrl(url);
+      setSyncStatus('Transactions successfully exported to Google Sheets!');
+    } catch (err: any) {
+      setSyncStatus(err?.message || 'Error occurred exporting transactions to Sheets');
+    }
+  };
 
   const [type, setType] = useState<'sale' | 'expense'>('sale');
   const [category, setCategory] = useState<TransactionCategory>('fuel');
@@ -472,10 +507,40 @@ export default function TransactionForm() {
             <h2 className="font-bold text-white text-base">Transactions Ledger</h2>
             <p className="text-xs text-slate-500 mt-0.5">Live items verified on current open shift session</p>
           </div>
-          <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 py-1 px-2 rounded-xl border border-emerald-500/20 font-semibold">
-            {filteredTransactions.length} Items this shift
-          </span>
+          
+          <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
+            <button
+              id="btn-tx-export"
+              onClick={handleExportTransactions}
+              disabled={googleExporting}
+              className="flex items-center gap-1.5 bg-emerald-600/10 hover:bg-emerald-600/25 disabled:bg-slate-800/45 text-emerald-400 disabled:text-slate-550 border border-emerald-500/20 hover:border-emerald-500/45 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer select-none transition"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>{googleExporting ? 'Exporting...' : 'Export to Sheets'}</span>
+            </button>
+
+            <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 py-1.5 px-2.5 rounded-lg border border-teal-500/20 font-semibold">
+              {filteredTransactions.length} Items this shift
+            </span>
+          </div>
         </div>
+
+        {syncStatus && (
+          <div className={`mb-4 p-2.5 rounded-lg text-xs font-medium border ${syncedUrl ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'} flex items-center justify-between gap-2`}>
+            <span>{syncStatus}</span>
+            {syncedUrl && (
+              <a
+                href={syncedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-emerald-400 font-extrabold hover:underline underline-offset-2 uppercase text-[10px]"
+              >
+                <span>Open Sheet</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Filter bars */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-4">

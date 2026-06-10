@@ -1,10 +1,46 @@
 import { useState, FormEvent } from 'react';
 import { useStore } from '../services/store';
+import { useGoogleWorkspace } from '../services/googleWorkspace';
 import { Customer } from '../types';
-import { UserPlus, Wallet, Milestone, ShieldCheck, TrendingUp, HandCoins, Building2, Search, Zap, CheckCircle2, XCircle } from 'lucide-react';
+import { 
+  UserPlus, 
+  Wallet, 
+  Milestone, 
+  ShieldCheck, 
+  TrendingUp, 
+  HandCoins, 
+  Building2, 
+  Search, 
+  Zap, 
+  CheckCircle2, 
+  XCircle,
+  FileSpreadsheet,
+  ExternalLink,
+  Loader2
+} from 'lucide-react';
 
 export default function CustomerManagement() {
   const { customers, addCustomer, depositToCustomerWallet, formatCurrency } = useStore();
+  const { googleAccessToken, exportCustomersToSheets, exporting: googleExporting } = useGoogleWorkspace();
+
+  const [syncedUrl, setSyncedUrl] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string>('');
+
+  const handleExportCRM = async () => {
+    if (!googleAccessToken) {
+      setSyncStatus('Google Workspace not connected. Please connect your Google account in the Insights Dashboard first.');
+      return;
+    }
+    setSyncStatus('');
+    setSyncedUrl(null);
+    try {
+      const url = await exportCustomersToSheets(customers);
+      setSyncedUrl(url);
+      setSyncStatus('Loyalty CRM exported successfully to Google Sheets!');
+    } catch (err: any) {
+      setSyncStatus(err?.message || 'Error occurred during CRM backup');
+    }
+  };
 
   // New Customer states
   const [name, setName] = useState('');
@@ -320,10 +356,40 @@ export default function CustomerManagement() {
             <h2 id="crm-header" className="font-bold text-white text-base">Prepaid & Loyalty Directory</h2>
             <p className="text-xs text-slate-500 mt-0.5">Automated scoring models for Soroti Client Base</p>
           </div>
-          <span className="text-xs font-mono bg-teal-500/10 text-teal-400 py-1 px-2.5 rounded-xl border border-teal-500/20 font-bold">
-            {filteredCustomers.length} Active Accounts
-          </span>
+          
+          <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto">
+            <button
+              id="btn-crm-export"
+              onClick={handleExportCRM}
+              disabled={googleExporting}
+              className="flex items-center gap-1.5 bg-emerald-600/10 hover:bg-emerald-600/25 disabled:bg-slate-800/45 text-emerald-400 disabled:text-slate-550 border border-emerald-500/20 hover:border-emerald-500/45 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer select-none transition"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>{googleExporting ? 'Exporting...' : 'Export to Sheets'}</span>
+            </button>
+
+            <span className="text-xs font-mono bg-teal-500/10 text-teal-400 py-1.5 px-2.5 rounded-lg border border-teal-500/20 font-bold">
+              {filteredCustomers.length} Active Accounts
+            </span>
+          </div>
         </div>
+
+        {syncStatus && (
+          <div className={`p-2.5 rounded-lg text-xs font-medium border ${syncedUrl ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'} flex items-center justify-between gap-2`}>
+            <span>{syncStatus}</span>
+            {syncedUrl && (
+              <a
+                href={syncedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-emerald-400 font-extrabold hover:underline underline-offset-2 uppercase text-[10px]"
+              >
+                <span>Open Sheet</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Simple Filter Panel */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
@@ -376,7 +442,7 @@ export default function CustomerManagement() {
                           </span>
                         )}
                       </h3>
-                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">{cust.phoneNumber || 'No registered contact phone'}</p>
+                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">{cust.phone || 'No registered contact phone'}</p>
                     </div>
 
                     <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StoreProvider, useStore } from './services/store';
+import { GoogleWorkspaceProvider } from './services/googleWorkspace';
 import BiometricLogin from './components/BiometricLogin';
 import TransactionForm from './components/TransactionForm';
 import ShiftManagement from './components/ShiftManagement';
@@ -175,7 +176,9 @@ function DashboardAppContent() {
 export default function App() {
   return (
     <StoreProvider>
-      <DashboardAppContent />
+      <GoogleWorkspaceProvider>
+        <DashboardAppContent />
+      </GoogleWorkspaceProvider>
     </StoreProvider>
   );
 }
